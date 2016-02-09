@@ -1,0 +1,300 @@
+<!doctype html>
+<html lang="en">
+
+	<head>
+		<meta charset="utf-8">
+
+		<title>Presenters in Rails - keeping things organized</title>
+
+		<meta name="description" content="Survey/review of how and why to use Presenters in Rails">
+		<meta name="author" content="Mr Rogers">
+
+		<meta name="apple-mobile-web-app-capable" content="yes" />
+		<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+
+		<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+
+		<link rel="stylesheet" href="css/reveal.min.css">
+		<link rel="stylesheet" href="css/theme/night.css" id="theme">
+		<link rel="stylesheet" href="css/customizations.css">
+		<!-- For syntax highlighting -->
+		<link rel="stylesheet" href="lib/css/zenburn.css">
+
+		<!-- If the query includes 'print-pdf', use the PDF print sheet -->
+		<script>
+			document.write( '<link rel="stylesheet" href="css/print/' + ( window.location.search.match( /print-pdf/gi ) ? 'pdf' : 'paper' ) + '.css" type="text/css" media="print">' );
+		</script>
+
+		<!--[if lt IE 9]>
+		    <script src="lib/js/html5shiv.js"></script>
+		    <![endif]-->
+	</head>
+
+	<body>
+
+		<div class="reveal">
+
+			<!-- Any section element inside of this container is displayed as a slide -->
+			<div class="slides">
+				<section data-background="#110011">
+					<h1>Presenters In Rails</h1>
+					<h4>Contain your domain knowledge</h4>
+					<p>
+						<small><a href="http://rcode5.com">Mr Rogers</a> / <a href="http://twitter.com/rcode5">@rcode5</a></small>
+					</p>
+				</section>
+
+				<section data-background="#160019">
+					<section class="fragments">
+					  <h2>Rails is MVC</h2>
+						<ul>
+							<li class="fragment"><strong>M</strong>&nbsp;odel</li>
+							<li class="fragment"><strong>V</strong>&nbsp;iew</li>
+							<li class="fragment"><strong>C</strong>&nbsp;ontroller</li>
+						</ul>
+            <p class="fragment">
+              Fine for simple stuff
+            </p>
+          </section>
+				</section>
+
+				<section data-background="#190022">
+					<h2>Why would we need more?</h2>
+					<p>
+            If we try to follow the
+          </p>
+          <p>
+            <em>Single Responsibility Principle</em>
+            <blockquote>
+              &ldquo;
+              every class should have a single responsibility, and that responsibility should be entirely encapsulated by the class. All its services should be narrowly aligned with that responsibility
+              &rdquo;
+            </blockquote>
+					</p>
+          <p>
+            MVC may not be enough
+          </p>
+				</section>
+
+				<section data-background="#1a002a">
+					<section class="fragments">
+					  <h2>Domain Model vs ActiveRecord</h2>
+						<ul>
+							<li class="fragment">An ActiveRecord object is a ruby wrapper on a database row</li>
+							<li class="fragment">A domain model might require business logic or domain model knowledge</li>
+              <li class="fragment"><em>Single Responsibility Principle</em></li>
+						</ul>
+          </section>
+				</section>
+
+        <section data-background="#190033">
+          <h2>Feature</h2>
+          <pre><code class="asciidoc">
+            As a visitor to the site
+            I can see a list of all users and their ages
+            Sorted by name
+            So I can easily find out demographics of users in our system
+          </code></pre>
+        </section>
+        <section data-background="#16003b">
+          <h2>Simplistic Rails</h2>
+					<pre><code data-trim contenteditable class='rb'>
+# users_controller.rb
+def index
+  @users = User.all
+end
+					</code></pre>
+					<pre><code data-trim contenteditable class='haml'>
+/ users/show.slim
+h2 Users
+  table
+    - @users.select{|u| u.active}.sort_by{|u| [u.first_name, u.last_name].map(&:downcase)}.each do |user|
+      tr
+        td.name = "#{user.first_name} #{user.last_name}"
+        td.age = "#{Time.zone.now.year - user.birthdate.year}"
+					</code></pre>
+          <p class="fragment">
+            Display logic is contained in the view
+          </p>
+        </section>
+
+        <section data-background="#110044">
+          <h2>Alternate Plain ol' Rails</h2>
+	        <pre><code data-trim contenteditable class="ruby">
+# user.rb
+class User
+  scope :by_name, -> { order('first_name, last_name') }
+  scope :active, -> { where(:active => true) }
+end
+          </code></pre>
+          <pre><code data-trim contenteditable class="ruby">
+# users_controller.rb
+def index
+  @users = User.active.by_name
+end
+          </code></pre>
+          <pre><code data-trim contenteditable class="haml">
+/ users/show.slim
+h2 Users
+  table
+    - @users.each do |user|
+      tr
+        td.name = "#{user.first_name} #{user.last_name}"
+        td.age = "#{Time.zone.now.year - user.birthdate.year}"
+          </code></pre>
+          <p class="fragment">
+            Less display logic in the view
+          </p>
+        </section>
+
+        <section data-background="#19003b">
+          <h2>Rails + a Presenter (or two)</h2>
+	        <pre><code data-trim contenteditable class="ruby">
+# user.rb
+class User
+  scope :by_name, -> { order('first_name, last_name') }
+  scope :active, -> { where(:active => true) }
+end
+	        </code></pre>
+	        <pre><code data-trim contenteditable class="ruby">
+# users_controller.rb
+def index
+  @users = UsersPresenter.new
+end
+	        </code></pre>
+	        <pre><code data-trim contenteditable class="haml">
+/ users/show.slim
+h2 Users
+  table
+    - @users.each do |user|
+      tr
+        td.name = user.name
+        td.age = user.age
+          </code></pre>
+        </section>
+
+        <section data-background="#220033">
+          <h2>The Presenters</h2>
+	        <pre><code data-trim contenteditable class="ruby">
+# users_presenter.rb
+class UsersPresenter
+  def users
+    @users ||= User.active.by_name.map{|u| UserPresenter.new(u)}
+  end
+end
+	        </code></pre>
+	        <pre><code data-trim contenteditable class="ruby">
+# user_presenter.rb
+class UserPresenter
+
+  attr_reader :user
+
+  def initialize(user)
+    @user = user
+  end
+  def name
+    @name ||= [user.first_name, user.last_name].join(" ")
+  end
+  def age
+    @age ||= (Time.zone.now.year - user.birthdate.year)
+  end
+end
+	        </code></pre>
+          <p class="fragment">
+            Display Logic is in the presenter
+          </p>
+        </section>
+
+        <section data-background="#2a002a">
+	        <section class="fragments">
+		        <h2>What does this buy us?</h2>
+		        <ul>
+			        <li class="fragment">easy focused testing</li>
+			        <li class="fragment">compartmentalization</li>
+			        <li class="fragment">re-use across controller methods</li>
+			        <li class="fragment"><em>Single Responsibility Principle</em>
+              </li>
+		        </ul>
+          </section>
+        </section>
+        
+        <section data-background="#300022">
+	        <section class="fragments">
+		        <h2>And?</h2>
+            <ul>
+              <li class="fragment">memoize safely (stateless object/one time use)</li>
+              <li class="fragment">keep business logic out of AR models</li>
+              <li class="fragment">build domain models that encompass two AR models</li>
+              <li class="fragment">keep code complexity to a minimum (ABC Complexity)</li>
+            </ul>
+            <p class="fragment">try it... I bet you'll find more uses</p>
+          </section>
+        </section>
+        
+        <section data-background="#330016">
+	        <h2>Thanks for not sleeping</h2>
+        </section>
+        
+        <section data-background="#330011">
+	        <h2>References/Reading list</h2>
+	        <ul>
+		        <li><a href="http://blog.carbonfive.com/2014/01/07/presenters-to-widgets-with-activemodelconversion/">The Carbon Emitter - Presenters to Widgets</a></li>
+		        <li><a href="http://blog.codeclimate.com/blog/2012/10/17/7-ways-to-decompose-fat-activerecord-models/">Code Climate Blog - 7 Patterns to Refactor Fat ActiveRecord Models</a></li>
+            <li><a href="http://blog.jayfields.com/2006/09/rails-model-view-controller-presenter.html">Jay Fields' Thoughts - Rails Model View Controller + Presenter?</a></li>
+            <li><a href="http://weblog.jamisbuck.org/2006/10/18/skinny-controller-fat-model">Jamis Buck - Skinny Controller, Fat Model</a></li>
+		        <li><a href="http://en.wikipedia.org/wiki/Single_responsibility_principle">Single Responsibility Principle (Wikipedia)</a></li>
+            <li><a href="http://martinfowler.com/eaaDev/">Martin Fowler's GUI Patterns</a></li>
+            <li><a href="http://www.softwarerenovation.com/ABCMetric.pdf">ABC Metric for Code Complexity</a></li>
+	        </ul>
+          <p>
+            &nbsp;
+          </p>
+          <h3>Slides</h3>
+          <ul>
+            <li><a href="http://github.com/bunnymatic/presenters-in-rails-presentation.git">http://github.com/bunnymatic/presenters-in-rails-presentation.git</a></li>
+          </ul>
+          <p class='tiny'>
+            <span class='item'>Mr Rogers</span>
+            <span class='item'>jon@carbonfive.com</span>
+            <span class="item"><a href="http://github.com/bunnyumatic"><img class='logo' src="./i/GitHub-Mark-32px.png">bunnymatic</a></span>
+            <span class="item"><a href="https://twitter.com/rcode5"><img class="logo" src="https://dev.twitter.com/sites/default/files/images_documentation/bird_blue_32.png">@rcode5</a></span>
+          </p>
+        </section>
+      </div>
+    </div>
+
+<script src="lib/js/head.min.js"></script>
+<script src="js/reveal.min.js"></script>
+
+<script>
+
+	// Full list of configuration options available here:
+	// https://github.com/hakimel/reveal.js#configuration
+	Reveal.initialize({
+	controls: true,
+	progress: true,
+	history: true,
+	center: true,
+
+	theme: Reveal.getQueryHash().theme, // available themes are in /css/theme
+	transition: Reveal.getQueryHash().transition || 'default', // default/cube/page/concave/zoom/linear/fade/none
+
+	// Parallax scrolling
+	// parallaxBackgroundImage: 'https://s3.amazonaws.com/hakim-static/reveal-js/reveal-parallax-1.jpg',
+	// parallaxBackgroundSize: '2100px 900px',
+
+	// Optional libraries used to extend on reveal.js
+	dependencies: [
+	{ src: 'lib/js/classList.js', condition: function() { return !document.body.classList; } },
+	{ src: 'plugin/markdown/marked.js', condition: function() { return !!document.querySelector( '[data-markdown]' ); } },
+	{ src: 'plugin/markdown/markdown.js', condition: function() { return !!document.querySelector( '[data-markdown]' ); } },
+	{ src: 'plugin/highlight/highlight.js', async: true, callback: function() { hljs.initHighlightingOnLoad(); } },
+	{ src: 'plugin/zoom-js/zoom.js', async: true, condition: function() { return !!document.body.classList; } },
+	{ src: 'plugin/notes/notes.js', async: true, condition: function() { return !!document.body.classList; } }
+	]
+	});
+
+</script>
+
+</body>
+</html>
