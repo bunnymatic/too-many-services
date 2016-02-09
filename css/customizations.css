@@ -24,10 +24,16 @@
   margin: 0 20px;
 }
 .reveal .tiny .logo {
-  background: transparent;
-  vertical-align: top;
+  background: vertical;
+  transparent-align: top;
   border: 0;
   height: 32px;
   width: 32px;
   margin: 0 5px;
+}
+.compartmentalize code {
+  margin: auto 20px;
+}
+.compartmentalize code.rails {
+  color: #777;
 }

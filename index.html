@@ -4,7 +4,7 @@
   <head>
     <meta charset="utf-8">
 
-    <title>Presenters in Rails - keeping things organized</title>
+    <title>So Many Services</title>
 
     <meta name="description" content="Survey/review of how and why to use Presenters in Rails">
     <meta name="author" content="Mr Rogers">
@@ -58,61 +58,50 @@
         </section>
 
         <section data-background="#190022">
-          <h2>Why would we need more?</h2>
+          <h2>But Single Responsibility?</h2>
           <p>
-            If we try to follow the
-          </p>
-          <p>
-            <em>Single Responsibility Principle</em>
             <blockquote>
               &ldquo;
               every class should have a single responsibility, and that responsibility should be entirely encapsulated by the class. All its services should be narrowly aligned with that responsibility
               &rdquo;
             </blockquote>
           </p>
-          <p>
-            MVC may not be enough
-          </p>
         </section>
 
+        <section class="compartmentalize">
+          <h2 >Compartmentalize</h2>
+          <img src="/i/directory_wordle.png"/>
+        </section>
         <section data-background="#110011">
-          <section class="fragments">
-            <h2>Compartmentalize</h2>
-            <ul>
-              <li class="fragment"><em>Single Responsibility Principle</em></li>
-              <li class="fragment">Presenters</li>
-              <li class="fragment">Form Objects</li>
-              <li class="fragment">Services</li>
-            </ul>
+          <section class="fragments compartmentalize">
+            <h2 >Compartmentalize</h2>
+              <code class="rails" >views</code>
+              <code >services</code>
+              <code class="rails">models</code>
+              <code class="rails">mailers</code>
+              <code class="rails">helpers</code>
+              <code class="rails">controllers</code>
+              <code class="rails">assets</code>
+              <code >presenters</code>
+              <code >validators</code>
+              <code >serializers</code>
+              <code >forms</code>
+              <code >policies</code>
+              <code class="rails">lib</code>
+              <code >workers</code>
+              <code >paginators</code>
+              <code >jobs</code>
+              <code >inputs</code>
+              <code >importers</code>
+              <code >authorizors</code>
+            </p>
           </section>
         </section>
 
-        <section>
-          <h2>Let's talk about services</h2>
-        </section>
-        <section >
-          <h2>Given /app/models</h2>
-          <pre><code class="asciidoc">
-              # email_list.rb
-              class EmailList < ActiveRecord::Base
-                has_many :email_list_memberships
-                has_many :emails, :through => :email_list_memberships
-              end
-
-              # email.rb
-              class Email < ActiveRecord::Base
-                has_many :email_list_memberships
-                has_many :email_list, :through => :email_list_membership
-              end
-
-              ... and many more ...
-          </code></pre>
-        </section>
-
         <section  data-background="#190022">
-          <h2>/app/services</h2>
+          <h2>app/services</h2>
           <pre><code class="asciidoc">
-              % ls ./app/services
+              % ls app/services
 
               artist_email_list_manager.rb
               artist_studio_manager.rb
@@ -128,11 +117,13 @@ class ArtistEmailListManager
   def initialize(artist)
     @artist = artist
   end
+
   def add_email(email)
-    # add email to the artists email list
+    ...
   end
+
   def remove_email(email)
-    # remove email to the artists email list
+    ...
   end
 end
           </code></pre>
@@ -145,11 +136,13 @@ class ArtistStudioManager
   def initialize(artist)
     @artist = artist
   end
+
   def assign_studio(studio)
-    # assign artist to studio
+    ...
   end
+
   def unassign_studio(studio)
-    # unassociate artist with studio
+    ...
   end
 end
           </code></pre>
@@ -161,35 +154,73 @@ end
 class TagFrequencyService
   def self.compute(model)
     # compute frequency of tag usage for model
+    ...
   end
 end
           </code></pre>
         </section>
         <section >
           <h4>Repos (from Hexagonal Rails)</h4>
+          <h4>app/repos/artists_repo.rb</h4>
           <pre><code data-trim contenteditable class='rb'>
 
 class ArtistRepo
-
-  def self.find_by_name(name)
-    Artist.find_by(name: name)
+  def self.find_by_art(art)
+    ...
   end
 
   def self.find_by_name_or_login(name_or_login)
-    # use arel or whatever
+    ...
   end
 end
           </code></pre>
         </section>
 
         <section >
+          <h4>Is this still SRP?</h4>
+          <pre><code data-trim contenteditable class='rb'>
+class ArtistAssociationsManager
+  def initialize(artist)
+    @artist = artist
+  end
+
+  def add_email(email)
+    ...
+  end
+
+  def remove_email(email)
+    ...
+  end
+
+  def assign_studio(studio)
+    ...
+  end
+
+  def unassign_studio(studio)
+    ...
+  end
+end
+
+          </code></pre>
+        </section>
+
+        <section >
           <h2>How do we name these things?</h2>
           <ul>
-            <li>ActiveRecord finder method wrappers (Repos)</li>
-            <li>Things that connect models (Form Objects, Domain Models)</li>
-            <li>Things that compute stuff (Calculators?)</li>
-            <li>When is /app/lib right?</li>
+            <li>ActiveRecord abstraction things (Repos)</li>
+            <li>Things that manage 2+ models (Managers, Form Objects, Domain Models)</li>
+            <li>Things that compute stuff (Calculators, Paginators)</li>
+            <li>Is app/lib ever right?</li>
           </ul>
+        </section>
+
+        <section >
+          <section class="fragments" >
+            <h2>Proposal:</h2>
+            <h4 class="fragment" >Think about it early</h4>
+            <h4 class="fragment" >Add more directories</h4>
+            <h4 class="fragment" >Agree on &ldquo;how big is a responsibility&rdquo;
+          </section>
         </section>
 
         <section data-background="#110011">
