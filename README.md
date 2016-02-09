@@ -1,4 +1,4 @@
-# Presenters In Rails Presentation
+# So Many Services
 
 To view this presentation, clone the repo and open the `index.html` file with a browser
 
